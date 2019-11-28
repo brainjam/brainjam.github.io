@@ -1,2 +1,2 @@
-# netlify
-Website on netlify
+# Github Pages
+Website on github pages
