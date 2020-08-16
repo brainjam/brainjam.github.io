@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<head>
+<style>
+    body {
+        font-family: Arial, Helvetica, sans-serif;
+        width: 30em ;
+    }
+</style>
+</head>
+
+<body>
+    <p>
+        Billiards on a hyperbolic symmetry.  There are only 3 balls, repeated across the tiling shown by the dotted lines. Thread. (1/n)
+    </p>
+    <video width="480" controls autoplay loop>
+        <source src="Hyperbolic billiards 1.mp4" type="video/mp4">
+    </video>
+      
+    <p>
+        Here's a full view of the Poincaré model and the controls.  I'll give the URL for the live version later in thread.  (2/n)
+    </p>
+    <video width="480" controls autoplay loop>
+        <source src="Hyperbolic-billiards-full.mp4" type="video/mp4">
+    </video>
+      
+    <p>
+        On the left side is the action on a single tile, along with some stats.
+        The transforms of each ball in the immediate neighborhood are also shown. Not only do balls collide within the tile, they also collide with their transforms outside the tile.  Balls can even collide with their own transforms.  (3/n)
+    </p>
+    <video width="480" controls autoplay loop>
+        <source src="hb-tile.mp4" type="video/mp4">
+    </video>
+    <p>
+        In what universe do entities collide with their transforms?  Probably none, but I implemented this to scratch an itch.  Confession: when balls self collide, kinetic energy is hacked to preserve total energy because the high school physics equations for elastic collisions don't preserve energy in this case.  (4/n)
+    </p>
+    <video width="480" controls autoplay loop>
+        <source src="Self-collision.mp4" type="video/mp4">
+    </video>
+    <p>
+        You can remove balls.  Here we reduce our universe to a single lonely particle.  Which exhibits the aforementioned problematic self collisions.  But often what looks like self-repulsion or self-orbiting is just copies flying past each other at tessellation vertices (5/n)
+    </p>
+    <video width="480" controls autoplay loop>
+        <source src="remove-balls.mp4" type="video/mp4">
+    </video>
+
+    <p>
+        You can can add balls.  Producing a hyperbolic gas, I guess. (6/n)
+    </p>
+    <video width="480" controls autoplay loop>
+        <source src="hyp-gas.mp4" type="video/mp4">
+    </video>
+
+    <p>
+        You can also change ball size.  Adding balls produces different phases of hyperbolic matter. (6/n)
+    </p>
+    <video width="480" controls autoplay loop>
+        <source src="hyp-gas.mp4" type="video/mp4">
+    </video>
+
+    The live version is on @Codepen at https://codepen.io/brainjam/full/GaYJjJ .  Don't try this on a phone, save it for a laptop.  Vladimir Bulatov recently posted a related videos at https://www.youtube.com/watch?v=Vuy6p_XCfDw and https://www.youtube.com/watch?v=wwSrZN8MprI(n/n)
+
+
+</body>
