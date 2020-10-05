@@ -1,0 +1,557 @@
+
+<!DOCTYPE HTML> 
+<html lang="en"> 
+	<head> 
+		<title>Hyperbolic Doodler</title> 
+		<meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<style type="text/css"> 
+			body {
+				background-color: #CCCCCC;
+				margin: 0px;
+				overflow: hidden;
+			}
+            
+            #help {
+				position: absolute;
+				top: 0px;
+
+				color: #ffffff;
+				font-family: Monospace;
+				font-size: 14px;
+				font-weight: bold;
+				text-shadow: rgba( 0, 0, 0, 0.75 ) 0px 1px 2px;
+			}
+
+            
+ 
+		</style> 
+        <script type="text/javascript" src="../googleAnalytics.js"></script>
+	</head> 
+	<body> 
+    <!-- very loosely based on mrdoob's sandbox examples. (http://mrdoob.com/blog/post/714) -->
+ 
+		<div id="effect"></div> 
+		<div id="help">
+            Instructions: drag the mouse to paint.
+        </div> 
+		<div id="info"></div> 
+ 
+		<script id="vs" type="x-shader/x-vertex"> 
+ 
+			attribute vec3 position;
+ 
+			void main() {
+ 
+				gl_Position = vec4( position, 1.0 );
+ 
+			}
+ 
+		</script> 
+ 
+		<script id="fs" type="x-shader/x-fragment"> 
+ 
+			uniform float time;
+			uniform vec2 resolution;
+            uniform vec2 aspect;
+            uniform float alpha ;
+            uniform float beta ;
+            uniform int even ;
+            
+            const int NUM_REPELLORS = 10 ;
+            const int TYPE = 0 ;
+            const int REGION_AD = 1 ;
+            const int REGION_BC = 2 ;
+            const int MOEBIUS_A = 3 ;
+            const int MOEBIUS_B = 4 ;
+            const int MOEBIUS_C = 5 ;
+            const int MOEBIUS_D = 6 ;
+            const int NUM_FIELDS = MOEBIUS_D+1 ;
+            
+            //uniform vec2 repellors[NUM_FIELDS*NUM_REPELLORS] ;
+            
+            struct Moebius {
+                vec2 a ;
+                vec2 b ;
+                vec2 c ;
+                vec2 d ;
+            } ;
+            
+            struct Region {
+                // members must be sorted largest to smallest
+                vec2 B ;    
+                vec2 C ;   // C is conj(B)
+                float D ;
+                float A ;
+            } ;
+            
+            Region regionList[NUM_REPELLORS] ;
+            
+            Moebius moebiusList[NUM_REPELLORS] ;
+ 
+			uniform sampler2D texture;
+
+            // complex number operations
+            vec2 mul (vec2 c1, vec2 c2){
+                return vec2(c1.x*c2.x-c1.y*c2.y,c1.x*c2.y+c1.y*c2.x) ;
+            }
+            
+            vec2 conj(vec2 c1){
+                return vec2(c1.x,-c1.y) ; 
+            }
+                        
+            vec2 reciprocal(vec2 c1){
+                return conj(c1)/dot(c1,c1) ;
+            }
+            
+            //vec2 exp(vec2 c1){
+            //    return exp(c1.x)*vec2(cos(c1.y),sin(c1.y)) ;
+            //}
+            
+            vec2 div (vec2 c1, vec2 c2){
+                return mul(c1,reciprocal(c2)) ;
+            }
+            
+            bool inside (vec2 z, Region region){
+                vec2 conjz = conj(z) ;
+                vec2 result = region.A*mul(z,conjz) + mul(region.B,z) + mul(region.C,conjz) + region.D ;
+                return (result.x < 0.0) ;
+            } 
+            
+            vec2 applyMoebius (Moebius m, vec2 z){
+                return div(mul(m.a,z)+m.b, mul(m.c,z)+m.d) ;
+            }
+            
+			void main( void ) {
+ 
+				vec2 original_position = -aspect.xy + 2.0 * gl_FragCoord.xy / resolution.xy * aspect.xy;
+                vec2 position = original_position ;
+                
+                float reflections = 0.0 ;
+                
+                vec2 lineNorm = vec2(-sin(alpha), cos(alpha)) ;
+                float cb = cos(beta) ;
+                float sa = sin(alpha) ;
+                float rho = sqrt(cb*cb -sa*sa) ;
+                vec2 center = vec2(cb/rho,0.0) ;
+                float r = sa/rho ;
+                int flips ;
+                
+                // map to fundamental region
+                for (int i=0; i<30; i+=1){
+                    flips = 0 ;
+                    vec2 diff = position - center ;
+                    float len = length(diff) ;
+                    if (even==1 && dot(position,lineNorm) < 0.0 && dot(position,vec2(lineNorm.x,-lineNorm.y)) < 0.0 && len>r){
+                        if( mod(reflections,2.0) == 1.0){
+                            position.y = -position.y ; reflections++ ;
+                        }
+                        break ;
+                    }  
+                    if (dot(position,lineNorm) > 0.0){
+                        position = reflect (position, lineNorm) ;
+                        reflections++ ; flips++ ; continue ;
+                    }
+                    if (len < r){
+                        position = center + diff*r*r/(len*len) ;
+                        reflections++ ; flips++ ; continue ;
+                    }
+                    if (position.y < 0.0){
+                        position.y = -position.y ;
+                        reflections++ ; flips++ ; continue ;
+                    }
+                    break ;
+                }
+                
+                vec2 uv = position ;
+				uv *= 0.5;
+                uv += 0.5 ;
+ 
+                gl_FragColor = texture2D( texture, uv ) ;
+                if (mod(reflections,2.0) == 1.0){
+                    gl_FragColor = vec4(gl_FragColor.rgb/1.05,1.0) ;
+                }
+                float atm = length(original_position) ;
+                if ( atm >= 1.0){
+                    gl_FragColor = vec4(0.0,0.0,2.0-atm,1.0) ;
+                } else {
+                    gl_FragColor = vec4(gl_FragColor.rgb*(1.0+2.0*atm),1.0) ;
+                }
+
+                //if (flips > 0){
+                //    gl_FragColor = vec4(1.0,0.0,0.0,1.0) ;
+                //}
+			}
+ 
+		</script> 
+ 
+		<script type="text/javascript"> 
+ 
+			var effectDiv, canvas, gl, buffer,
+			vertex_shader, fragment_shader, currentProgram,
+			vertexPositionLocation, texture=0, textureLocation,
+			parameters = {  start_time: new Date().getTime(),
+                            time: 0,
+                            screenWidth: 0,
+                            screenHeight: 0,
+                            alpha: Math.PI/8.0,
+                            beta: Math.PI/3.0,
+                            even: 1  };
+            
+            var textureCanvas, textureCtx ;
+
+            var alpha = parameters.alpha ;
+            var beta =  parameters.beta ;
+            var lineNorm = new Coord(-Math.sin(alpha), Math.cos(alpha)) ;
+            var cb = Math.cos(beta) ;
+            var sa = Math.sin(alpha) ;
+            var rho = Math.sqrt(cb*cb -sa*sa) ;
+            var center = new Coord(cb/rho,0.0) ;
+            var r = sa/rho ;
+            
+            function fundamentalRegion(p)
+            {
+                var reflections = 0 ;
+                for (var i=0; i < 20; i++){
+                    var flips = 0 ;
+                    var diff = new Coord(p.x-center.x ,p.y-center.y) ;
+                    var len = Math.sqrt(diff.x*diff.x + diff.y*diff.y) ;
+                    if (parameters.even && dot(p,lineNorm) < 0.0 && dot(p,new Coord(lineNorm.x,-lineNorm.y)) < 0.0 && len>r){
+                        if( reflections%2 == 1){
+                            p.y = -p.y ; reflections++ ;
+                        }
+                        break ;
+                    }  
+                    if (p.y < 0){
+                        p.y = -p.y ; flips++ ; reflections++ ; continue ;
+                    }
+                    if (dot(p,lineNorm)>0){
+                        p = reflect(p,lineNorm) ;
+                        flips++ ; reflections++ ; continue ;
+                    }
+                    if (len < r){
+                        var fact = r*r/(len*len) ;
+                        p = new Coord(center.x + fact*diff.x, center.y + fact*diff.y) ;
+                        flips++ ; reflections++ ; continue ;
+                    }
+                    if (!flips) break ;
+                }
+                return p ;
+            }
+
+            function reflect(i,n){
+                var d = dot(i,n) ;
+                return new Coord(i.x-2*d*n.x ,i.y-2*d*n.y) ;
+            }
+            
+            function dot(p,q){
+                return p.x*q.x + p.y*q.y ;
+            } 
+            
+            function Coord(x,y)
+            {
+                this.x = x ;
+                this.y = y ;
+            }           
+            
+            var mouseDown = false ;
+            
+            onmousedown = function(event){
+                mouseDown = true ;
+                onmousemove(event) ;
+                return false ;  // disable I-beam cursor on webkit
+            }
+            onmouseup = function(event){
+                mouseDown = false ;
+            }
+            
+            onmousemove = function(event){
+                if (!mouseDown){return ;}
+                var p = {} ;
+                p.x =  (2*event.pageX-canvas.width)*parameters.aspectX/canvas.width ;
+                p.y = -(2*event.pageY-canvas.height)/canvas.height ;
+                p = fundamentalRegion(p) ;
+                var x = (textureCanvas.width  + p.x*textureCanvas.width) /2 ;
+                var y = (textureCanvas.height - p.y*textureCanvas.height)/2 ;
+
+                textureCtx.save() ;
+                textureCtx.translate (textureCanvas.width/2,textureCanvas.height/2) ;
+                textureCtx.scale(.997,0.997) ;
+                //textureCtx.rotate(0.01) ;
+                textureCtx.translate (-textureCanvas.width/2,-textureCanvas.height/2) ;
+                textureCtx.drawImage( textureCtx.canvas, 0,0);
+                textureCtx.restore() ;
+
+                textureCtx.save() ;
+                textureCtx.fillStyle = 'rgba(0,0,0,0.004)';
+                textureCtx.fillRect (0,0,textureCtx.canvas.width,textureCtx.canvas.height) ;
+                textureCtx.fillStyle = 'white' ;
+                textureCtx.beginPath();
+                textureCtx.arc(x,y,1,0,Math.PI*2,1);
+                textureCtx.fill();
+                if (Math.random()<0.05){
+                    textureCtx.fillStyle = ['red','blue','green','white','black'][(5*Math.random())|0];
+                    textureCtx.fillRect(x,y,Math.random()*20,Math.random()*20) ;
+                }
+                textureCtx.restore() ;
+                draw() ;
+              };
+              
+              var zoom ;
+              
+              function wheel (event){
+                var delta ;
+                if ( event.wheelDelta ) delta = event.wheelDelta/120;
+                if ( event.detail     ) delta = -event.detail/3;
+                //alert (delta) ;
+              }
+              
+              onmousewheel = function(event){
+                wheel(event) ;
+              }
+                if (addEventListener){
+                    addEventListener("DOMMouseScroll", function scroll(event){
+                    wheel(event) ;
+                  },false) ;
+              }
+
+ 
+			init();
+            draw() ;
+			//setInterval( draw, 1000 / 60 );
+ 
+			function init() {
+ 
+				vertex_shader = document.getElementById( 'vs' ).textContent;
+				fragment_shader = document.getElementById( 'fs' ).textContent;
+ 
+				effectDiv = document.getElementById( 'effect' );
+ 
+				canvas = document.createElement( 'canvas' );
+				effectDiv.appendChild( canvas );
+                
+
+                
+                // crappy initialization needs to be refactored and put somewhere else
+                textureCanvas = document.createElement( 'canvas' );
+				effectDiv.appendChild( textureCanvas );
+				textureCanvas.width = 512 ; //window.innerWidth;
+				textureCanvas.height = 512 ; //window.innerHeight;
+                textureCtx = textureCanvas.getContext("2d");
+                var lingrad = textureCtx.createLinearGradient(0,0,512,512);
+                lingrad.addColorStop(0,  '#00c' );
+                lingrad.addColorStop(1, '#ccc');
+                textureCtx.fillStyle = lingrad;
+                textureCtx.fillStyle = "black" ;
+                textureCtx.fillRect(0,0,textureCanvas.width, textureCanvas.height);
+                textureCtx.strokeStyle = 'red' ;
+                textureCtx.strokeRect( 2,2,508,508);
+                textureCtx.strokeStyle = 'white' ;
+                for (var i=5; i < 512; i+= 10){
+                    textureCtx.beginPath() ;
+                    textureCtx.moveTo(i,0) ;
+                    textureCtx.lineTo(i,512) ;
+                    textureCtx.stroke() ;
+                    textureCtx.beginPath() ;
+                    textureCtx.moveTo(0,i) ;
+                    textureCtx.lineTo(512,i) ;
+                    textureCtx.stroke() ;
+                }
+                textureCtx.fillStyle = 'red' ;
+                textureCtx.font = '32px arial' ;
+                textureCtx.fillText ('TL', 50,50) ;
+                textureCtx.fillText ('TR', 450,50) ;
+                textureCtx.fillText ('BL', 50,450) ;
+                textureCtx.fillText ('BR', 450,450) ;
+                textureCtx.font = '16px arial' ;
+                textureCtx.fillText ('draw!', 280,253) ;
+                
+
+
+                // end of crappy initialization
+ 
+				// Initialise WebGL
+ 
+				try {
+ 
+					gl = canvas.getContext( 'experimental-webgl' );
+ 
+				} catch( error ) { }
+ 
+				if ( !gl ) {
+ 
+					alert("WebGL not supported on this browser.\n\nUse Chrome, or the Firefox or Webkit betas.");
+					throw "cannot create webgl context";
+ 
+				}
+                
+                //alert (gl.getParameter(gl.SHADING_LANGUAGE_VERSION))
+                
+                gl.console = ('console' in window) ? console : {log: function(){}} ;
+ 
+				// Create Vertex buffer (2 triangles)
+                var vertices = [ - 1.0, - 1.0, 1.0, - 1.0, - 1.0, 1.0, 1.0, - 1.0, 1.0, 1.0, - 1.0, 1.0 ] ;
+				buffer = gl.createBuffer();
+				gl.bindBuffer( gl.ARRAY_BUFFER, buffer );
+				gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW );
+ 
+				// Create Program 
+				currentProgram = createProgram( vertex_shader, fragment_shader );
+                // Load program into GPU
+				gl.useProgram( currentProgram );
+
+                // Set up texturing
+                gl.enable( gl.TEXTURE_2D );
+                gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+                texture = 0 ;
+ 
+				onWindowResize();
+				window.addEventListener( 'resize', onWindowResize, false );
+ 
+			}
+ 
+			function onWindowResize( event ) {
+ 
+				canvas.width = window.innerWidth;
+				canvas.height = window.innerHeight;
+ 
+				parameters.screenWidth = canvas.width;
+				parameters.screenHeight = canvas.height;
+                
+                parameters.aspectX = canvas.width/canvas.height ;
+                parameters.aspectY = 1.0 ;
+ 
+				gl.viewport( 0, 0, canvas.width, canvas.height );
+                draw() ;
+ 
+			}
+ 
+ 
+			function createProgram( vertex, fragment ) {
+ 
+				var program = gl.createProgram();
+ 
+				var vs = createShader( vertex, gl.VERTEX_SHADER );
+				var fs = createShader( '#ifdef GL_ES\nprecision highp float;\n#endif\n\n' + fragment, gl.FRAGMENT_SHADER );
+ 
+				if ( vs == null || fs == null ) return null;
+ 
+				gl.attachShader( program, vs );
+				gl.attachShader( program, fs );
+ 
+				gl.deleteShader( vs );
+				gl.deleteShader( fs );
+ 
+				gl.linkProgram( program );
+ 
+				if ( !gl.getProgramParameter( program, gl.LINK_STATUS ) ) {
+ 
+					alert( "ERROR:\n" +
+					"VALIDATE_STATUS: " + gl.getProgramParameter( program, gl.VALIDATE_STATUS ) + "\n" +
+					"ERROR: " + gl.getError() + "\n\n" +
+					"- Vertex Shader -\n" + vertex + "\n\n" +
+					"- Fragment Shader -\n" + fragment );
+ 
+					return null;
+ 
+				}
+ 
+				return program;
+ 
+			}
+ 
+			function createShader( src, type ) {
+ 
+				var shader = gl.createShader( type );
+ 
+				gl.shaderSource( shader, src );
+				gl.compileShader( shader );
+ 
+				if ( !gl.getShaderParameter( shader, gl.COMPILE_STATUS ) ) {
+ 
+					alert( ( type == gl.VERTEX_SHADER ? "VERTEX" : "FRAGMENT" ) + " SHADER:\n" + gl.getShaderInfoLog( shader ) );
+					return null;
+ 
+				}
+ 
+				return shader;
+ 
+			}
+            /*
+            var octahedral =  [// type    AD   BC     A   B    C    D
+                                    1,0,   0,0, 0,-1,  0,-1,  0,0, 0,0, 0,-1, 
+                                    1,0,   0,0, 1,0,   -1,0,  0,0, 0,0, 1,0, 
+                                    1,0,   -1,1, 0,0,   0,0, -1,0, -1,0, 0,0, 
+                                    0,0,   0,0, 1,0,   0,0,   0,0, 0,0, 0,0, 
+                                    ] ;
+            */
+                                    
+            var lastTime ;
+            
+            function setHTML(id, str){
+                var el = document.getElementById(id)
+                if (el){
+                    el.innerHTML = str ;
+                }
+            }
+
+ 
+			function draw() {
+ 
+				if ( !currentProgram ) return;
+ 
+				parameters.time = new Date().getTime() - parameters.start_time;
+                
+                if (lastTime){setHTML('info', parameters.time-lastTime) ;
+                    
+                }
+                lastTime = parameters.time ;
+ 
+				//gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT );
+ 
+				// Get var locations
+ 
+				vertexPositionLocation = gl.getAttribLocation( currentProgram, 'position' );
+				textureLocation = gl.getUniformLocation( currentProgram, 'texture' );
+ 
+				// Set values to program variables
+ 
+				gl.uniform1f( gl.getUniformLocation( currentProgram, 'time' ), parameters.time / 1000 );
+				gl.uniform1f( gl.getUniformLocation( currentProgram, 'alpha' ), parameters.alpha );
+				gl.uniform1i( gl.getUniformLocation( currentProgram, 'even' ), parameters.even );
+				gl.uniform1f( gl.getUniformLocation( currentProgram, 'beta' ), parameters.beta );
+				gl.uniform2f( gl.getUniformLocation( currentProgram, 'resolution' ), parameters.screenWidth, parameters.screenHeight );
+				gl.uniform2f( gl.getUniformLocation( currentProgram, 'aspect' ), parameters.aspectX, parameters.aspectY );
+
+                /*if (octahedral){
+                    gl.uniform2fv( gl.getUniformLocation( currentProgram, 'repellors' ), new Float32Array(octahedral) );
+                }*/
+ 
+				gl.uniform1i( textureLocation, 0 );
+				gl.activeTexture( gl.TEXTURE0);
+                if (!texture){
+                    texture = gl.createTexture();
+                }
+				gl.bindTexture( gl.TEXTURE_2D, texture );
+                gl.texImage2D( gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textureCanvas );
+                gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR );
+                gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR );
+                gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT );
+                gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT );
+                gl.generateMipmap( gl.TEXTURE_2D );
+
+ 
+				// Render geometry
+ 
+				gl.bindBuffer( gl.ARRAY_BUFFER, buffer );
+				gl.vertexAttribPointer( vertexPositionLocation, 2, gl.FLOAT, false, 0, 0 );
+				gl.enableVertexAttribArray( vertexPositionLocation );
+				gl.drawArrays( gl.TRIANGLES, 0, 6 );
+				gl.disableVertexAttribArray( vertexPositionLocation );
+ 
+			}
+ 
+		</script> 
+ 
+	</body> 
+</html> 
