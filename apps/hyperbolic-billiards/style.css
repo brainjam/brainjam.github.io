@@ -1,0 +1,16 @@
+body {
+	background-color: #cccccc;
+	margin: 0px;
+	overflow: hidden;
+}
+
+#help {
+	position: absolute;
+	top: 0px;
+
+	color: #ffffff;
+	font-family: Monospace;
+	font-size: 14px;
+	font-weight: bold;
+	text-shadow: rgba(0, 0, 0, 0.75) 0px 1px 2px;
+}

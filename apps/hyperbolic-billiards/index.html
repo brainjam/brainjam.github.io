@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8">
+  <title>CodePen - Hyperbolic Billiards</title>
+  <link rel="stylesheet" href="./style.css">
+
+</head>
+<body>
+<!-- partial:index.partial.html -->
+<div id="effect">
+</div> 
+<div id="info">
+</div> 
+<a id="download"></a>
+
+<script id="vs" type="x-shader/x-vertex"> 
+	
+	attribute vec3 position;
+
+	void main() {
+
+		gl_Position = vec4( position, 1.0 );
+
+	} 
+</script> 
+ 
+<script id="fs" type="x-shader/x-fragment"> 
+ 
+	uniform float time;
+	uniform vec2 resolution;
+	uniform vec2 aspect;
+	uniform float alpha ;
+	uniform float beta ;
+	uniform int even ;
+
+	const int NUM_REPELLORS = 10 ;
+	const int TYPE = 0 ;
+	const int REGION_AD = 1 ;
+	const int REGION_BC = 2 ;
+	const int MOEBIUS_A = 3 ;
+	const int MOEBIUS_B = 4 ;
+	const int MOEBIUS_C = 5 ;
+	const int MOEBIUS_D = 6 ;
+	const int NUM_FIELDS = MOEBIUS_D+1 ;
+
+	//uniform vec2 repellors[NUM_FIELDS*NUM_REPELLORS] ;
+
+	struct Moebius {
+		vec2 a ;
+		vec2 b ;
+		vec2 c ;
+		vec2 d ;
+	} ;
+
+	struct Region {
+		// members must be sorted largest to smallest
+		vec2 B ;    
+		vec2 C ;   // C is conj(B)
+		float D ;
+		float A ;
+	} ;
+
+	// for line sx+ty=dot(p,n): A=0,B=s-it,C=conj(B),D=-2*dot(p,n)
+
+	Region regionList[NUM_REPELLORS] ;
+
+	Moebius moebiusList[NUM_REPELLORS] ;
+
+	uniform sampler2D texture;
+
+	// complex number operations
+	vec2 mul (vec2 c1, vec2 c2){
+		return vec2(c1.x*c2.x-c1.y*c2.y,c1.x*c2.y+c1.y*c2.x) ;
+	}
+
+	vec2 conj(vec2 c1){
+		return vec2(c1.x,-c1.y) ; 
+	}
+
+	vec2 reciprocal(vec2 c1){
+		return conj(c1)/dot(c1,c1) ;
+	}
+
+	vec2 div (vec2 c1, vec2 c2){
+		return mul(c1,reciprocal(c2)) ;
+	}
+
+	bool inside (vec2 z, Region region){
+		vec2 conjz = conj(z) ;
+		vec2 result = region.A*mul(z,conjz) + mul(region.B,z) + mul(region.C,conjz) + region.D ;
+		return (result.x < 0.0) ;
+	} 
+
+	vec2 applyMoebius (Moebius m, vec2 z){
+		return div(mul(m.a,z)+m.b, mul(m.c,z)+m.d) ;
+	}
+
+void main( void ) {
+
+	vec2 original_position = -aspect.xy + 2.0 * gl_FragCoord.xy / resolution.xy * aspect.xy;
+	vec2 position = original_position ;
+
+	gl_FragColor = vec4(0.0,0,1.0,1.0) ;
+
+	float reflections = 0.0 ;
+
+	vec2 lineNorm = vec2(-sin(alpha), cos(alpha)) ;
+	float cb = cos(beta) ;
+	float sa = sin(alpha) ;
+	float rho = sqrt(cb*cb -sa*sa) ;
+	vec2 center = vec2(cb/rho,0.0) ;
+	float r = sa/rho ;
+	int flips ;
+
+	// map to fundamental region
+	for (int i=0; i<50; i+=1){   // was 30
+		flips = 0 ;
+		vec2 diff = position - center ;
+		float len = length(diff) ;
+		if (even==1 && dot(position,lineNorm) < 0.0 && dot(position,vec2(lineNorm.x,-lineNorm.y)) < 0.0 && len>r){
+			if( mod(reflections,2.0) == 1.0){
+				position.y = -position.y ; reflections++ ;
+			}
+			break ;
+		}  
+		if (dot(position,lineNorm) > 0.0){
+			position = reflect (position, lineNorm) ;
+			reflections++ ; flips++ ; continue ;
+		}
+		if (len < r){
+			position = center + diff*r*r/(len*len) ;
+			reflections++ ; flips++ ; continue ;
+		}
+		if (position.y < 0.0){
+			position.y = -position.y ;
+			reflections++ ; flips++ ; continue ;
+		}
+		break ;
+	}
+
+	vec2 uv = position ;
+	uv += 0.5 ;
+
+	gl_FragColor = texture2D( texture, uv ) ;
+	if (mod(reflections,2.0) == 1.0){
+		gl_FragColor=vec4(1.0,0.0,0.0,1.0) ;
+	}
+	float atm = length(original_position) ;
+	if ( atm >= 1.0){
+		//gl_FragColor = vec4(0.0,0.0,2.0-atm,1.0) ;
+		//gl_FragColor = vec4(1.0,1.0,1.0,1.0) ;
+    //gl_FragColor = vec4(0.039,0.424,0.012,1.0) ;
+		//gl_FragColor = vec4((2.0-atm)/1.5*vec3(0.039,0.424,0.012),1.0) ;
+		gl_FragColor = vec4((2.0-atm)/1.5*vec3(0.4,0.4,0.5),1.0) ;
+	}
+
+}
+ 
+</script>
+<!-- partial -->
+  <script src='https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.6/dat.gui.min.js'></script>
+<script src='https://brainjam.netlify.com/assets/js/undoer.js'></script><script  src="./script.js"></script>
+
+</body>
+</html>
