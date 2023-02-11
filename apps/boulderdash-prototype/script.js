@@ -1,7 +1,7 @@
 let manPos = [10,20] ;
 let [space,rock,dirt,man,boundary,rock2] = ['&nbsp;','⚪','⬜','+','=','!'] ;
     //[space,rock,dirt,man,boundary,rock2] = ['&nbsp;','&#127766;','&#129003;','+','=','!'] ;
-const [KEY_UP,KEY_DOWN,KEY_LEFT,KEY_RIGHT,KEY_RESET] = [38,40,37,39,27] ;
+const [KEY_UP,KEY_DOWN,KEY_LEFT,KEY_RIGHT,KEY_RESET] = ['UpArrow','DownArrow','UpArrow','UpArrow','Escape'] ;
 let field = [] ;
 //document.getElementById('help').focus() ;
 
@@ -64,10 +64,11 @@ function processCell (i,j){
 }
 
 function processMan(){
-  //console.log(`lastKey=${lastKey}`) ;
+  console.log(`lastKey=${lastKey}`) ;
   //lastKey=37 ;
   //return ;
-  let delta = [[0,-1],[-1,0],[0,1],[1,0]][lastKey-37] ;
+  //let delta = [[0,-1],[-1,0],[0,1],[1,0]][lastKey-37] ;
+  let delta = {ArrowLeft:[0,-1],ArrowUp:[-1,0],ArrowRight:[0,1],ArrowDown:[1,0]}[lastKey] ;
   debugger ;
   if (delta){
     //console.log (`move ${delta}`) ;
@@ -121,22 +122,13 @@ function step() {
 
 window.requestAnimationFrame(step);
 
-
 function randomIntFromInterval(min, max) { // min and max included 
   return Math.floor(Math.random() * (max - min + 1) + min)
 }
 
 let lastKey=KEY_RESET ;
-document.onkeydown = function(event) {
-  var key = event.keyCode;
-  lastKey = key ;
-  //console.log(`key=${key}`)  //ESC is 27
-  
-};
 
-// prevent window scrolling when arrow keys are pressed
-window.addEventListener("keydown", function(e) {
-    if(["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].indexOf(e.code) > -1) {
-        e.preventDefault();
-    }
-}, false);
+document.onkeydown = function(event) {
+  lastKey = event.code;
+  console.log(`--lastKey=${lastKey}`) ;
+};
