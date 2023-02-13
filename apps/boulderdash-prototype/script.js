@@ -1,9 +1,11 @@
 let manPos = [10,20] ;
-let [space,rock,dirt,man,boundary,rock2] = ['&nbsp;','⚪','⬜','+','=','!'] ;
-    //[space,rock,dirt,man,boundary,rock2] = ['&nbsp;','&#127766;','&#129003;','+','=','!'] ;
-const [KEY_UP,KEY_DOWN,KEY_LEFT,KEY_RIGHT,KEY_RESET] = ['UpArrow','DownArrow','UpArrow','UpArrow','Escape'] ;
-let field = [] ;
-//document.getElementById('help').focus() ;
+const letters = ['&nbsp;','O','-','+','%','!'] ;
+const shapes = ['&nbsp;','⚪','⬜','+','=','!'] ;
+const emojis = ['&nbsp;','&#127766;','&#129003;','🏃','🗄','!'] ;
+let chars = shapes ;
+let [space,rock,dirt,man,boundary,rock2] = [0,1,2,3,4,5] ;
+const KEY_RESET = 'Escape' ;
+let field = [] ;1
 
 function reset() {
   debugger ;
@@ -19,7 +21,7 @@ function reset() {
           if (Math.random() <0.35){
             row[j] = space ;
           } 
-          if (Math.random() <0.10){
+          if (Math.random() <0.20){
             row[j] = rock ;
           } 
         }
@@ -35,7 +37,8 @@ function render() {
   debugger ;
   let output = [] ;
   for (let i=0; i<22; i++){
-    output.push(field[i].join(''))
+    let row = field[i].map(x => chars[x]) ;
+    output.push(row.join(''))
   }
   let fieldEl = document.getElementById('field') ;
   fieldEl.innerHTML = output.join('<br>') ;
@@ -64,18 +67,9 @@ function processCell (i,j){
 }
 
 function processMan(){
-  console.log(`lastKey=${lastKey}`) ;
-  //lastKey=37 ;
-  //return ;
-  //let delta = [[0,-1],[-1,0],[0,1],[1,0]][lastKey-37] ;
   let delta = {ArrowLeft:[0,-1],ArrowUp:[-1,0],ArrowRight:[0,1],ArrowDown:[1,0]}[lastKey] ;
-  debugger ;
   if (delta){
-    //console.log (`move ${delta}`) ;
-    //debugger ;
     let [i,j] = [manPos[0]+delta[0],manPos[1]+delta[1]] ;
-    //console.log(`manPos ${manPos}`)
-    //console.log(`move to ${[i,j]}`)
     if(field[i][j]==space || field[i][j]==dirt){
       field[i][j] = man ;
       field[manPos[0]][manPos[1]]=space ;
@@ -89,8 +83,15 @@ function step1(){
   debugger ;
   if (lastKey==KEY_RESET){
     reset() ;
-    lastKey = 0 ;
-    return ;
+  }
+  if (lastKey=='Digit1'){
+    chars=letters ;
+  }
+  if (lastKey=='Digit2'){
+    chars=shapes ;
+  }
+  if (lastKey=='Digit3'){
+    chars=emojis ;
   }
   processMan() ;
   for(let i=1; i<21; i++){
@@ -130,5 +131,4 @@ let lastKey=KEY_RESET ;
 
 document.onkeydown = function(event) {
   lastKey = event.code;
-  console.log(`--lastKey=${lastKey}`) ;
 };
