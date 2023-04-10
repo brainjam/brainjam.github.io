@@ -3,6 +3,7 @@ const letters = ['&nbsp;','O','-','+','%','!'] ;
 const shapes = ['&nbsp;','⚪','⬜','+','=','!'] ;
 const emojis = ['&nbsp;','&#127766;','&#129003;','🏃','🗄','!'] ;
 let chars = shapes ;
+let bgColor = 'blue' ;
 let [space,rock,dirt,man,boundary,rock2] = [0,1,2,3,4,5] ;
 const KEY_RESET = 'Escape' ;
 let field = [] ;1
@@ -42,6 +43,7 @@ function render() {
   }
   let fieldEl = document.getElementById('field') ;
   fieldEl.innerHTML = output.join('<br>') ;
+  fieldEl.style.backgroundColor = bgColor ;
 }
 
 let count = 0 ;
@@ -86,12 +88,15 @@ function step1(){
   }
   if (lastKey=='Digit1'){
     chars=letters ;
+    bgColor = 'blue' ;
   }
   if (lastKey=='Digit2'){
     chars=shapes ;
+    bgColor = 'blue' ;
   }
   if (lastKey=='Digit3'){
     chars=emojis ;
+    bgColor = 'black' ;
   }
   processMan() ;
   for(let i=1; i<21; i++){
