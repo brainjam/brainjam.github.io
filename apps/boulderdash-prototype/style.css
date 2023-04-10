@@ -4,7 +4,7 @@
 }
  
 p {
-   font-family: atari;
+   font-family: atari,monospace;
    color: whitesmoke;
   background-color: blue;
     font-size: 1.5em ;
